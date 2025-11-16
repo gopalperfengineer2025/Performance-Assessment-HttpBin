@@ -1,4 +1,4 @@
-🧪 HTTPBin Post API Performance Test Suite  (JMeter + Docker Compose)
+HTTPBin Post API Performance Test Suite  (JMeter + Docker Compose)
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 📌 Overview
 
@@ -80,8 +80,7 @@ cf ssh perfsimulatorjmx12 -N -T -L 12010:localhost:12010 -L 12011:localhost:1201
 
 
 🧭 Execution via CLI (Alternative)
-nohup ./jmeter -n \ -t httpbin_api_test.jmx \ -l results/Load-test-300-users-aggregatereport.jtl.jtl \ -e -o report-html/loadtest \ > results/Load-test-300-users-aggregatereport.jtl 2>&1 &
-
+Execution via CLI (Alternative) nohup ./jmeter -n \ -t httpbin_api_test.jmx \ -l results/soaktest.jtl \ -e -o report-html/soaktest \ > results/soaktest.log 2>&1 &
 
 
 Keeps the test running in the background
