@@ -1,4 +1,4 @@
-HTTPBin Post API Performance Test Suite  (JMeter + Docker Compose)
+HTTPBin Post API Performance Test Scenarios (JMeter + Docker Compose)
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 📌 Overview
 
