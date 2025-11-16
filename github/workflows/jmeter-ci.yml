@@ -1,0 +1,112 @@
+name: JMeter Performance Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '11'
+
+    - name: Create results directory
+      run: |
+        mkdir -p results
+        mkdir -p report-html
+
+    - name: Download and extract JMeter
+      run: |
+        if [ ! -d "apache-jmeter-5.6.3" ]; then
+          wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.3.tgz
+          tar -xzf apache-jmeter-5.6.3.tgz
+        fi
+
+    - name: Start HTTPBin service
+      run: |
+        docker run -d -p 8000:80 --name httpbin kennethreitz/httpbin
+        echo "Waiting for HTTPBin to be ready..."
+        timeout 30 bash -c 'until curl -f http://localhost:8000/get; do sleep 2; done'
+        echo "✅ HTTPBin is ready!"
+        curl -v http://localhost:8000/get
+
+    - name: Run JMeter Tests
+      run: |
+        ./apache-jmeter-5.6.3/bin/jmeter -n \
+          -t httpbin_api_test.jmx \
+          -l results/LoadTest_Report.csv \
+          -e -o report-html \
+          -Jjmeter.save.saveservice.output_format=csv \
+          -Jjmeter.reportgenerator.overall_granularity=1000
+      continue-on-error: true
+
+    - name: Check JMeter execution
+      run: |
+        if [ -f "results/results.csv" ]; then
+          echo "✅ JMeter results file generated successfully"
+          ls -lh results/LoadTest_Report.csv
+        else
+          echo "❌ JMeter results file not found!"
+          exit 1
+        fi
+
+    - name: Verify HTML Report
+      run: |
+        if [ -f "report-html/index.html" ]; then
+          echo "✅ JMeter HTML report generated successfully"
+          ls -lh report-html/
+        else
+          echo "❌ JMeter HTML report not generated!"
+          echo "Contents of current directory:"
+          ls -la
+          echo "Contents of report-html directory:"
+          ls -la report-html/
+          echo "JMeter log:"
+          cat jmeter.log
+          exit 1
+        fi
+
+    - name: Stop HTTPBin service
+      if: always()
+      run: docker stop httpbin || true
+
+    - name: Upload JMeter Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: jmeter-results
+        path: results/
+
+    - name: Upload JMeter HTML Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: jmeter-html-report
+        path: report-html/
+
+    - name: Upload JMeter Log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: jmeter-log
+        path: jmeter.log
+
+    - name: Display Test Summary
+      if: always()
+      run: |
+        echo "=== Test Execution Summary ==="
+        if [ -f "results/LoadTest_Report.csv" ]; then
+          echo "Total Samples: $(grep -c ',HTTP' results/LoadTest_Report.csv || echo 'N/A')"
+        fi
+        echo "Report available in artifacts"
